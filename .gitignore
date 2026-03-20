@@ -1,0 +1,37 @@
+# Binaries
+serverbeacon
+serverbeacon.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Dist/build dirs
+dist/
+build/
+release/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Configuration files
+config.toml
+secrets.toml
+config/config.toml
+config/.secrets.toml
+.env
+.env
+
+!*example*.*
+!*.*example*
+
+# Database files
+data/
+*.sqlite
+*.db
+
+# Logs
+logs/
+*.log
