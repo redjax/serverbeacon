@@ -31,7 +31,7 @@ builds:
 
 archives:
   - id: serverbeacon-api-archive
-    builds: [serverbeacon-api]
+    ids: [serverbeacon-api]
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -39,7 +39,7 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64{{ end }}
     files:
       - README.md
-      # - LICENSE*
+      # - license*
       # - config/config.example.toml
 
 checksum:
@@ -56,8 +56,8 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^chore:"
-      - Merge pull request
-      - Merge branch
+      - merge pull request
+      - merge branch
 
 dist: dist
 
@@ -68,18 +68,32 @@ release:
   draft: false
   prerelease: auto
 
-dockers:
-  - ids:
-      - serverbeacon-api
-    image_templates:
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/serverbeacon-api:{{ .Tag }}"
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/serverbeacon-api:latest"
-    dockerfile: Dockerfile
-    skip_push: '{{ ne .Env.GITHUB_ACTIONS "true" }}' # Only do Docker release if running in a Github Actions
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64,linux/arm64"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.revision={{ .Commit }}"
-      - '--label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}'
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+# dockers:
+#   - ids: [serverbeacon-api]
+#     image_templates:
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-amd64"
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-arm64"
+#     dockerfile: dockerfile
+#     goos: linux
+#     goarch: amd64
+#     skip_push: '{{ ne .env.github_actions "true" }}' # only release docker container if running in github action
+#   - ids: [serverbeacon-api]
+#     image_templates:
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-amd64"
+#     dockerfile: dockerfile
+#     goarch: amd64
+#   - ids: [serverbeacon-api]
+#     image_templates:
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-arm64"
+#     dockerfile: dockerfile
+#     goarch: arm64
+
+# docker_manifests:
+#   - name_template: "ghcr.io/redjax/serverbeacon-api:{{ .tag }}"
+#     image_templates:
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-amd64"
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-arm64"
+#   - name_template: "ghcr.io/redjax/serverbeacon-api:latest"
+#     image_templates:
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-amd64"
+#       - "ghcr.io/redjax/serverbeacon-api:{{ .tag }}-arm64"

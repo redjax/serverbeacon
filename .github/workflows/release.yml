@@ -39,16 +39,30 @@ jobs:
         id: version
         run: |
           ## Get latest version
-          CURRENT=$(git tag --list --sort=-version:refname | head -1 || echo "v0.0.0")
+          CURRENT=$(git tag --list --sort=-version:refname | head -1)
+          [[ -z "$CURRENT" ]] && CURRENT="v0.0.0"
+
+          echo "Latest tag: ${CURRENT}"
 
           if [[ "${{ github.event.inputs.bump }}" == "major" ]]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            [[ -z "$MAJOR" ]] && MAJOR=0
+            [[ -z "$MINOR" ]] && MINOR=0
+            [[ -z "$PATCH" ]] && PATCH=0
             VERSION="v$((MAJOR + 1)).0.0"
+            
           elif [[ "${{ github.event.inputs.bump }}" == "minor" ]]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            [[ -z "$MAJOR" ]] && MAJOR=0
+            [[ -z "$MINOR" ]] && MINOR=0
+            [[ -z "$PATCH" ]] && PATCH=0
             VERSION="v${MAJOR}.$((MINOR + 1)).0"
+            
           elif [[ "${{ github.event.inputs.bump }}" == "patch" ]]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            [[ -z "$MAJOR" ]] && MAJOR=0
+            [[ -z "$MINOR" ]] && MINOR=0
+            [[ -z "$PATCH" ]] && PATCH=0
             VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
           else
             echo "Auto versioning from commits"
@@ -84,7 +98,8 @@ jobs:
             fi
           fi
 
-          echo "New version: $VERSION (from ${CURRENT#v})"
+          echo "Parsed: MAJOR=$MAJOR MINOR=$MINOR PATCH=$PATCH"
+          echo "New version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           ## Check if tag exists
@@ -105,19 +120,6 @@ jobs:
         with:
           go-version: "stable"
 
-      - name: Docker login
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -126,4 +128,47 @@ jobs:
           args: "release --clean"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Docker login
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        run: |
+          # Use the *same* Dockerfile you use locally
+          VERSION=${{ steps.version.outputs.version }}
+          TAG="ghcr.io/redjax/serverbeacon-api:${VERSION}"
+
+          # Build for amd64
+          docker buildx build \
+            --platform linux/amd64 \
+            -t "${TAG}-amd64" \
+            --push \
+            .
+
+          # Build for arm64
+          docker buildx build \
+            --platform linux/arm64 \
+            -t "${TAG}-arm64" \
+            --push \
+            .
+
+      - name: Create Docker manifest
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          TAG="ghcr.io/redjax/serverbeacon-api:${VERSION}"
+
+          docker buildx imagetools create \
+            -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
+            "${TAG}-amd64" "${TAG}-arm64"
+
+          # Optionally push "latest" too
+          docker buildx imagetools create \
+            -t "ghcr.io/redjax/serverbeacon-api:latest" \
+            "${TAG}-amd64" "${TAG}-arm64"
