@@ -2,3 +2,4 @@
 go = "1.26.1"
 direnv = "latest"
 goreleaser = "latest"
+"aqua:air-verse/air" = "latest"

@@ -9,6 +9,7 @@ serverbeacon.exe
 
 # Dist/build dirs
 dist/
+bin/
 build/
 release/
 
@@ -37,3 +38,6 @@ data/
 # Logs
 logs/
 *.log
+
+# Other
+tmp/
