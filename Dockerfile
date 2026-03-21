@@ -11,7 +11,7 @@ COPY . .
 RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux \
-    go build -o serverbeacon cmd/serverbeacon/main.go
+    go build -o serverbeacon-api cmd/api/main.go
 
 FROM gcr.io/distroless/static-debian12
 
@@ -22,4 +22,4 @@ USER 1000
 
 EXPOSE 18080
 
-CMD ["./serverbeacon"]
+CMD ["./serverbeacon-api"]
