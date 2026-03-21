@@ -38,7 +38,7 @@ archives:
       {{- .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{ end }}
     files:
-      - readme.md
+      - README.md
       # - license*
       # - config/config.example.toml
 
