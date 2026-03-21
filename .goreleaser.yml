@@ -31,13 +31,12 @@ builds:
 
 archives:
   - id: serverbeacon-api-archive
+    builds: [serverbeacon-api]
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
       {{- .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
+      {{- if eq .Arch "amd64" }}x86_64{{ end }}
     files:
       - README.md
       # - LICENSE*
@@ -68,3 +67,19 @@ release:
     name: serverbeacon
   draft: false
   prerelease: auto
+
+dockers:
+  - ids:
+      - serverbeacon-api
+    image_templates:
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/serverbeacon-api:{{ .Tag }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/serverbeacon-api:latest"
+    dockerfile: Dockerfile
+    skip_push: '{{ ne .Env.GITHUB_ACTIONS "true" }}' # Only do Docker release if running in a Github Actions
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64,linux/arm64"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .Commit }}"
+      - '--label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}'
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"

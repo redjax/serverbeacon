@@ -1,0 +1,129 @@
+---
+name: Release
+
+on:
+  # pull_request:
+  #   branches: ["main"]
+  #   ## Only trigger when PR closes
+  #   types: [closed]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Bump level (major/minor/patch), or leave empty for auto"
+        required: false
+        type: choice
+        options:
+          - ""
+          - major
+          - minor
+          - patch
+        default: ""
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  goreleaser:
+    ## Only run when PR to main is merged (closed + merged)
+    # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version & create tag
+        id: version
+        run: |
+          ## Get latest version
+          CURRENT=$(git tag --list --sort=-version:refname | head -1 || echo "v0.0.0")
+
+          if [[ "${{ github.event.inputs.bump }}" == "major" ]]; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            VERSION="v$((MAJOR + 1)).0.0"
+          elif [[ "${{ github.event.inputs.bump }}" == "minor" ]]; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            VERSION="v${MAJOR}.$((MINOR + 1)).0"
+          elif [[ "${{ github.event.inputs.bump }}" == "patch" ]]; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          else
+            echo "Auto versioning from commits"
+            
+            if [[ "$CURRENT" == "v0.0.0" ]]; then
+              COMMITS=$(git log --pretty=format:"%s")
+            else
+              COMMITS=$(git log ${CURRENT}..HEAD --pretty=format:"%s")
+            fi
+            
+            COMMIT_COUNT=$(echo "$COMMITS" | grep -v '^$' | wc -l)
+            if [[ $COMMIT_COUNT -eq 0 ]]; then
+              echo "No commits since last tag. Nothing to release."
+              exit 1
+            fi
+            
+            echo "Commits since $CURRENT:"
+            echo "$COMMITS"
+            
+            if echo "$COMMITS" | grep -qE "^feat(\\(.+\\))?:"; then
+              echo "Found 'feat:' commits, bumping minor"
+              IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+              VERSION="v${MAJOR}.$((MINOR + 1)).0"
+            elif echo "$COMMITS" | grep -qE "^fix(\\(.+\\))?:"; then
+              echo "Found 'fix:' commits, bumping patch"
+              IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+              VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+            else
+              echo "⚠️ No 'feat:' or 'fix:' commits found:"
+              echo "$COMMITS"
+              echo "Use conventional commits: feat: ..., fix: ..."
+              exit 1
+            fi
+          fi
+
+          echo "New version: $VERSION (from ${CURRENT#v})"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          ## Check if tag exists
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists"
+            exit 1
+          fi
+
+          ## Create annotated tag
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+          echo "Created and pushed tag: $VERSION"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Docker login
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: "release --clean"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
