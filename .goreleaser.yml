@@ -69,17 +69,31 @@ release:
   prerelease: auto
 
 dockers:
-  - ids:
-      - serverbeacon-api
+  - ids: [serverbeacon-api]
     image_templates:
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/serverbeacon-api:{{ .Tag }}"
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/serverbeacon-api:latest"
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-amd64"
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-arm64"
     dockerfile: Dockerfile
-    skip_push: '{{ ne .Env.GITHUB_ACTIONS "true" }}' # Only do Docker release if running in a Github Actions
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64,linux/arm64"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.revision={{ .Commit }}"
-      - '--label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}'
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+    goos: linux
+    goarch: amd64
+    skip_push: '{{ ne .Env.GITHUB_ACTIONS "true" }}' # Only release Docker container if running in Github Action
+  - ids: [serverbeacon-api]
+    image_templates:
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-amd64"
+    dockerfile: Dockerfile
+    goarch: amd64
+  - ids: [serverbeacon-api]
+    image_templates:
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-amd64"
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/redjax/serverbeacon-api:latest"
+    image_templates:
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-amd64"
+      - "ghcr.io/redjax/serverbeacon-api:{{ .Tag }}-arm64"
