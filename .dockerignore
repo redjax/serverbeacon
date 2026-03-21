@@ -1,0 +1,9 @@
+bin/
+tmp/
+dist/
+.envrc
+.envrc*
+.mise.toml
+.goreleaser.yml
+serverbeacon[.exe]
+.gitignore
