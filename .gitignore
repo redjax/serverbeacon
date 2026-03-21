@@ -23,6 +23,8 @@ config/config.toml
 config/.secrets.toml
 .env
 .env
+*.local
+*.local.*
 
 !*example*.*
 !*.*example*
