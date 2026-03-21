@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-echo "Building serverbeacon"
+echo "Building serverbeacon api"
 
 ## Get OS and ARCH
 OS=$(go env GOOS)
@@ -13,9 +13,9 @@ echo "Target: ${OS}/${ARCH}"
 mkdir -p dist
 
 ## Set output name based on OS
-OUTPUT="dist/serverbeacon"
+OUTPUT="dist/serverbeacon-api"
 if [ "$OS" = "windows" ]; then
-    OUTPUT="dist/serverbeacon.exe"
+    OUTPUT="dist/serverbeacon-api.exe"
 fi
 
 ## Build
