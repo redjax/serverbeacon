@@ -13,7 +13,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux \
     go build -o serverbeacon cmd/serverbeacon/main.go
 
-FROM scratch
+FROM gcr.io/distroless/static-debian12
 
 WORKDIR /app
 COPY --from=builder /app .

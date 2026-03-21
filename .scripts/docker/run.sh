@@ -10,7 +10,9 @@ PORT=18080
 NAME="serverbeacon"
 IMG="serverbeacon"
 TAG="latest"
-INTERACTIVE=false
+## Interactive disabled, Dockerfile is distroless
+#  and does not have an interactive shell.
+# INTERACTIVE=false
 DRY_RUN=false
 
 cmd=(docker run --rm)
@@ -23,8 +25,8 @@ function usage() {
   echo "  -p, --port         <int>     Set host port"
   echo "  -n, --name         <string>  Set container's name when running"
   echo "  -h, --help                   Print this help menu"
-  echo "  -i, --interactive            Run container in interactive mode"
-  echo "  -I, --img          <string>  Set the container image name to run"
+  # echo "  -i, --interactive            Run container in interactive mode"
+  echo "  -i, --img          <string>  Set the container image name to run"
   echo "  -t, --tag          <string>  Set the container image's tag to target"
   echo "  --dry-run                    Enable dry-run mode, state actions without taking them"
   echo ""
@@ -40,11 +42,11 @@ while [[ $# -gt 0 ]]; do
       NAME="${2}"
       shift 2
       ;;
-    -i|--interactive)
-      INTERACTIVE=true
-      shift
-      ;;
-    -I|--img)
+    # -i|--interactive)
+    #   INTERACTIVE=true
+    #   shift
+    #   ;;
+    -i|--img)
       IMG="${2}"
       shift 2
       ;;
@@ -88,11 +90,13 @@ if [[ -z "${TAG}" ]]; then
   exit 1
 fi
 
-if [[ "${INTERACTIVE}" == "true" ]]; then
-  cmd+=(-it "${NAME}" /bin/bash)
-else
-  cmd+=(-d -p "${PORT}:18080" --name "${NAME}" "${IMG}:${TAG}")
-fi
+# if [[ "${INTERACTIVE}" == "true" ]]; then
+#   cmd+=(-it "${NAME}" /bin/bash)
+# else
+#   cmd+=(-d -p "${PORT}:18080" --name "${NAME}" "${IMG}:${TAG}")
+# fi
+
+cmd+=(-d -p "${PORT}:18080" --name "${NAME}" "${IMG}:${TAG}")
 
 echo "Running command:"
 echo "  ${cmd[*]}"
