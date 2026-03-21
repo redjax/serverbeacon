@@ -31,7 +31,7 @@ builds:
 
 archives:
   - id: serverbeacon-api-archive
-    builds: [serverbeacon-api]
+    ids: [serverbeacon-api]
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
