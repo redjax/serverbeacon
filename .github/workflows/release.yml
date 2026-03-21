@@ -39,16 +39,30 @@ jobs:
         id: version
         run: |
           ## Get latest version
-          CURRENT=$(git tag --list --sort=-version:refname | head -1 || echo "v0.0.0")
+          CURRENT=$(git tag --list --sort=-version:refname | head -1)
+          [[ -z "$CURRENT" ]] && CURRENT="v0.0.0"
+
+          echo "Latest tag: ${CURRENT}"
 
           if [[ "${{ github.event.inputs.bump }}" == "major" ]]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            [[ -z "$MAJOR" ]] && MAJOR=0
+            [[ -z "$MINOR" ]] && MINOR=0
+            [[ -z "$PATCH" ]] && PATCH=0
             VERSION="v$((MAJOR + 1)).0.0"
+            
           elif [[ "${{ github.event.inputs.bump }}" == "minor" ]]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            [[ -z "$MAJOR" ]] && MAJOR=0
+            [[ -z "$MINOR" ]] && MINOR=0
+            [[ -z "$PATCH" ]] && PATCH=0
             VERSION="v${MAJOR}.$((MINOR + 1)).0"
+            
           elif [[ "${{ github.event.inputs.bump }}" == "patch" ]]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
+            [[ -z "$MAJOR" ]] && MAJOR=0
+            [[ -z "$MINOR" ]] && MINOR=0
+            [[ -z "$PATCH" ]] && PATCH=0
             VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
           else
             echo "Auto versioning from commits"
@@ -84,7 +98,8 @@ jobs:
             fi
           fi
 
-          echo "New version: $VERSION (from ${CURRENT#v})"
+          echo "Parsed: MAJOR=$MAJOR MINOR=$MINOR PATCH=$PATCH"
+          echo "New version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           ## Check if tag exists
