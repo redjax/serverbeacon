@@ -7,10 +7,10 @@ tmp_dir = "tmp"
 
 [build]
 args_bin = []
-bin = "./bin/serverbeacon"
-cmd = "go build -o ./min/serverbeacon ."
+bin = "./bin/serverbeacon-api"
+cmd = "go build -o ./bin/serverbeacon-api cmd/api/main.go"
 delay = 1000
-entrypoint = ["./bin/serverbeacon"]
+entrypoint = ["./bin/serverbeacon-api"]
 exclude_dir = ["assets", "tmp", "vendor", "testdata"]
 exclude_file = []
 exclude_regex = ["_test.go"]
