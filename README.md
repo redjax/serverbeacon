@@ -15,4 +15,4 @@ Simple Go app that listens on multiple interfaces for external hosts to check se
   - [ ] Only allow SSH keys, no user/password auth
 - [ ] RPC message
   - [ ] Create a client to 'ping' the server
-- [ ] Docker container
+- [x] Docker container
