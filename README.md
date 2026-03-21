@@ -16,6 +16,12 @@ Simple Go app that listens on multiple interfaces for external hosts to check se
 serverbeacon -h
 ```
 
+Test the connection with:
+
+```shell
+curl http[s]://your-ip-or-fqdn:18080/v1/health
+```
+
 ### Local Development
 
 - Pull packages with `go mod tidy`
