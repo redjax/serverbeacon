@@ -24,9 +24,9 @@ builds:
         goarch: arm64
     ldflags:
       - -s -w
-      - -x main.version={{.Version}}
-      - -x main.commit={{.Commit}}
-      - -x main.date={{.Date}}
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
