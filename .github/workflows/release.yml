@@ -141,34 +141,20 @@ jobs:
 
       - name: Build and push Docker images
         run: |
-          # Use the *same* Dockerfile you use locally
           VERSION=${{ steps.version.outputs.version }}
-          TAG="ghcr.io/redjax/serverbeacon-api:${VERSION}"
 
-          # Build for amd64
+          ## API image (multi-arch)
           docker buildx build \
-            --platform linux/amd64 \
-            -t "${TAG}-amd64" \
-            --push \
-            .
-
-          # Build for arm64
-          docker buildx build \
-            --platform linux/arm64 \
-            -t "${TAG}-arm64" \
-            --push \
-            .
-
-      - name: Create Docker manifest
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          TAG="ghcr.io/redjax/serverbeacon-api:${VERSION}"
-
-          docker buildx imagetools create \
+            --target serverbeacon-api \
+            --platform linux/amd64,linux/arm64 \
             -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
-            "${TAG}-amd64" "${TAG}-arm64"
-
-          # Optionally push "latest" too
-          docker buildx imagetools create \
             -t "ghcr.io/redjax/serverbeacon-api:latest" \
-            "${TAG}-amd64" "${TAG}-arm64"
+            --push .
+
+          ## CLI image (multi-arch)  
+          docker buildx build \
+            --target serverbeacon \
+            --platform linux/amd64,linux/arm64 \
+            -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
+            -t "ghcr.io/redjax/serverbeacon:latest" \
+            --push .
