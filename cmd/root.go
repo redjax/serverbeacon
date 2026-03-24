@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/redjax/serverbeacon/internal/config"
@@ -11,7 +10,6 @@ import (
 var (
 	configFile string
 	debug      bool
-	cfg        *config.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -52,15 +50,5 @@ func init() {
 }
 
 func loadConfig(cmd *cobra.Command, args []string) error {
-	c, err := config.LoadConfig(cmd.PersistentFlags(), configFile)
-	if err != nil {
-		return fmt.Errorf("config error: %w", err)
-	}
-
-	cfg = c
-
-	// Debug print config
-	// fmt.Printf("Config: %+v\n", cfg)
-
-	return nil
+	return config.Init(cmd.PersistentFlags(), configFile)
 }
