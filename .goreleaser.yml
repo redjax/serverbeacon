@@ -69,7 +69,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}_
       {{ .Version }}_
-      {{ .OS }}_
+      {{ .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{ end }}
     files:
       - README.md
