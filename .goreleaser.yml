@@ -7,6 +7,7 @@ before:
     - go generate ./...
 
 builds:
+  ## API binary
   - id: serverbeacon-api
     main: ./cmd/api
     binary: serverbeacon-api
@@ -29,7 +30,28 @@ builds:
       - -X main.date={{.Date}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  ## CLI binary
+  - id: serverbeacon-cli
+    main: ./cmd/cli
+    binary: serverbeacon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
+  ## API archive
   - id: serverbeacon-api-archive
     ids: [serverbeacon-api]
     name_template: >-
@@ -39,8 +61,19 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64{{ end }}
     files:
       - README.md
-      # - license*
-      # - config/config.example.toml
+      - config.yml
+
+  ## CLI archive
+  - id: serverbeacon-cli-archive
+    ids: [serverbeacon-cli]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{ .Version }}_
+      {{ .OS }}_
+      {{- if eq .Arch "amd64" }}x86_64{{ end }}
+    files:
+      - README.md
+      - config.yml
 
 checksum:
   name_template: "checksums.txt"
