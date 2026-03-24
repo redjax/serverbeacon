@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/adrg/xdg"
 	"github.com/knadh/koanf/parsers/dotenv"
@@ -22,7 +23,11 @@ import (
 
 const envPrefix = "SERVERBEACON_"
 
-var K = koanf.New(".")
+var (
+	once sync.Once
+	_cfg *Config
+	K    = koanf.New(".")
+)
 
 // Main config object
 type Config struct {
@@ -75,6 +80,11 @@ func createDefaultConfigWithEnvVars() map[string]interface{} {
 // Return the default config file path (~/.local/share/serverbeacon/config.yml)
 func GetDefaultConfigPath() string {
 	return filepath.Join(xdg.DataHome, "serverbeacon", "config.yml")
+}
+
+// Return environment prefix
+func GetEnvPrefix() string {
+	return envPrefix
 }
 
 // FindConfigFile checks for a .local variant of the config file first,
@@ -252,4 +262,36 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// Init loads and caches the config (call from entrypoints like cmd/root.go)
+func Init(flagSet *pflag.FlagSet, configFile string) error {
+	var initErr error
+	once.Do(func() {
+		c, err := LoadConfig(flagSet, configFile)
+		if err != nil {
+			initErr = fmt.Errorf("config.Init failed: %w", err)
+			return
+		}
+
+		// Debug config
+		// fmt.Printf("Config: %+v\n", c)
+
+		_cfg = c
+	})
+
+	return initErr
+}
+
+// GetConfig returns the initialized Config
+func GetConfig() *Config {
+	if _cfg == nil {
+		panic("config.Init() must be called before GetConfig()")
+	}
+	return _cfg
+}
+
+// GetKoanf returns the raw koanf instance
+func GetKoanf() *koanf.Koanf {
+	return K
 }

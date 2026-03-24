@@ -1,13 +1,17 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
+	"log"
 
+	startcommand "github.com/redjax/serverbeacon/internal/commands/startCommand"
+	"github.com/redjax/serverbeacon/internal/config"
 	"github.com/spf13/cobra"
 )
 
-var configFile string
+var (
+	configFile string
+	debug      bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "serverbeacon",
@@ -19,17 +23,34 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(os.Stderr, err)
-		os.Exit(1)
-	}
+	cobra.CheckErr(rootCmd.Execute())
 }
 
 func init() {
+	// Parse CLI flags
+
+	// Config file
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config-file", "c", "", "config file path (default: ~/.local/share/serverbeacon/config.yml)")
+	// Debug flag
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "D", false, "Enable debug logging")
+
+	// Load configuration
+	rootCmd.PersistentPreRunE = loadConfig
+
+	// Handle persistent flgs
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		// Handle --debug flag
+		if d, _ := cmd.Flags().GetBool("debug"); d {
+			log.SetFlags(log.LstdFlags | log.Lshortfile)
+			log.Println("DEBUG logging enabled")
+		}
+	}
+
 	// Register subcommands
 	// rootCmd.AddCommand(cmdPkg.ExampleCmd)
+	rootCmd.AddCommand(startcommand.NewStartCommand())
+}
 
-	// Global persistent flgs
-	// Empty default means 'use default with .local fallback'
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config-file", "c", "", "config file path (default: ~/.local/share/serverbeacon/config.yml)")
+func loadConfig(cmd *cobra.Command, args []string) error {
+	return config.Init(cmd.PersistentFlags(), configFile)
 }
