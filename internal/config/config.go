@@ -77,6 +77,11 @@ func GetDefaultConfigPath() string {
 	return filepath.Join(xdg.DataHome, "serverbeacon", "config.yml")
 }
 
+// Return environment prefix
+func GetEnvPrefix() string {
+	return envPrefix
+}
+
 // FindConfigFile checks for a .local variant of the config file first,
 // falling back to the original if .local doesn't exist.
 // If configFile is empty, returns the default XDG config path.
