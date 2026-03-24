@@ -17,7 +17,7 @@ func New() http.Handler {
 	v1.HandleFunc("GET /ping", pinghandlers.Ping)
 	v1.HandleFunc("GET /health", healthcheckhandlers.Healthcheck)
 
-	mux.Handle("/v1/", http.StripPrefix("/v1", middleware.Logging(v1)))
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", middleware.Logging(v1)))
 
 	return mux
 }
