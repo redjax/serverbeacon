@@ -3,6 +3,7 @@ package cmd
 import (
 	"log"
 
+	startcommand "github.com/redjax/serverbeacon/internal/commands/startCommand"
 	"github.com/redjax/serverbeacon/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -47,6 +48,7 @@ func init() {
 
 	// Register subcommands
 	// rootCmd.AddCommand(cmdPkg.ExampleCmd)
+	rootCmd.AddCommand(startcommand.NewStartCommand())
 }
 
 func loadConfig(cmd *cobra.Command, args []string) error {
