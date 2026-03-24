@@ -55,10 +55,10 @@ archives:
   - id: serverbeacon-api-archive
     ids: [serverbeacon-api]
     name_template: >-
-      {{ .ProjectName }}_
+      {{ .ProjectName }}-api_
       {{- .Version }}_
       {{- .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64{{ end }}
+      {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
     files:
       - README.md
       - config.yml
@@ -68,9 +68,9 @@ archives:
     ids: [serverbeacon-cli]
     name_template: >-
       {{ .ProjectName }}_
-      {{ .Version }}_
-      {{ .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64{{ end }}
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
     files:
       - README.md
       - config.yml
