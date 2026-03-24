@@ -16,7 +16,12 @@ goreleaser build --snapshot --clean
 echo ""
 echo "[SUCCESS] Build complete! Binaries are in the dist/ directory:"
 echo ""
-ls -lh dist/*/serverbeacon* 2>/dev/null || echo "No binaries found"
+
+## Debug API build
+echo "API binaries:"
+find dist -type f -name "serverbeacon-api*" -print
+
+## Debug CLI build
 echo ""
-echo "Build artifacts:"
-find dist -name "serverbeacon*" -type f -exec echo "  {}" \;
+echo "CLI binaries:"
+find dist -type f -name "serverbeacon" -o -name "serverbeacon_*" -print

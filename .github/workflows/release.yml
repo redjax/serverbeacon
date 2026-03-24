@@ -2,10 +2,6 @@
 name: Release
 
 on:
-  # pull_request:
-  #   branches: ["main"]
-  #   ## Only trigger when PR closes
-  #   types: [closed]
   workflow_dispatch:
     inputs:
       bump:
@@ -19,16 +15,19 @@ on:
           - patch
         default: ""
 
-permissions:
-  contents: write
-  packages: write
-  id-token: write
+permissions: {}
 
 jobs:
+  ## Build & release Go apps
   goreleaser:
-    ## Only run when PR to main is merged (closed + merged)
-    # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    permissions:
+      contents: write # git tag creation
+      issues: write # changelog links
+      pull-requests: write # changelog links
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,82 +37,7 @@ jobs:
       - name: Determine version & create tag
         id: version
         run: |
-          ## Get latest version
-          CURRENT=$(git tag --list --sort=-version:refname | head -1)
-          [[ -z "$CURRENT" ]] && CURRENT="v0.0.0"
-
-          echo "Latest tag: ${CURRENT}"
-
-          if [[ "${{ github.event.inputs.bump }}" == "major" ]]; then
-            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
-            [[ -z "$MAJOR" ]] && MAJOR=0
-            [[ -z "$MINOR" ]] && MINOR=0
-            [[ -z "$PATCH" ]] && PATCH=0
-            VERSION="v$((MAJOR + 1)).0.0"
-            
-          elif [[ "${{ github.event.inputs.bump }}" == "minor" ]]; then
-            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
-            [[ -z "$MAJOR" ]] && MAJOR=0
-            [[ -z "$MINOR" ]] && MINOR=0
-            [[ -z "$PATCH" ]] && PATCH=0
-            VERSION="v${MAJOR}.$((MINOR + 1)).0"
-            
-          elif [[ "${{ github.event.inputs.bump }}" == "patch" ]]; then
-            IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
-            [[ -z "$MAJOR" ]] && MAJOR=0
-            [[ -z "$MINOR" ]] && MINOR=0
-            [[ -z "$PATCH" ]] && PATCH=0
-            VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-          else
-            echo "Auto versioning from commits"
-            
-            if [[ "$CURRENT" == "v0.0.0" ]]; then
-              COMMITS=$(git log --pretty=format:"%s")
-            else
-              COMMITS=$(git log ${CURRENT}..HEAD --pretty=format:"%s")
-            fi
-            
-            COMMIT_COUNT=$(echo "$COMMITS" | grep -v '^$' | wc -l)
-            if [[ $COMMIT_COUNT -eq 0 ]]; then
-              echo "No commits since last tag. Nothing to release."
-              exit 1
-            fi
-            
-            echo "Commits since $CURRENT:"
-            echo "$COMMITS"
-            
-            if echo "$COMMITS" | grep -qE "^feat(\\(.+\\))?:"; then
-              echo "Found 'feat:' commits, bumping minor"
-              IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
-              VERSION="v${MAJOR}.$((MINOR + 1)).0"
-            elif echo "$COMMITS" | grep -qE "^fix(\\(.+\\))?:"; then
-              echo "Found 'fix:' commits, bumping patch"
-              IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT#v}"
-              VERSION="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-            else
-              echo "⚠️ No 'feat:' or 'fix:' commits found:"
-              echo "$COMMITS"
-              echo "Use conventional commits: feat: ..., fix: ..."
-              exit 1
-            fi
-          fi
-
-          echo "Parsed: MAJOR=$MAJOR MINOR=$MINOR PATCH=$PATCH"
-          echo "New version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-          ## Check if tag exists
-          if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "Tag $VERSION already exists"
-            exit 1
-          fi
-
-          ## Create annotated tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin "$VERSION"
-          echo "Created and pushed tag: $VERSION"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -129,6 +53,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  ## Build Docker images
+  docker:
+    permissions:
+      packages: write # push to GHCR
+      contents: read # checkout code
+    runs-on: ubuntu-latest
+    needs: goreleaser # only runs if GoReleaser succeeds
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
 
@@ -139,36 +75,22 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker images
+      - name: Build & push API image
         run: |
-          # Use the *same* Dockerfile you use locally
-          VERSION=${{ steps.version.outputs.version }}
-          TAG="ghcr.io/redjax/serverbeacon-api:${VERSION}"
-
-          # Build for amd64
+          VERSION=${{ needs.goreleaser.outputs.version }}
           docker buildx build \
-            --platform linux/amd64 \
-            -t "${TAG}-amd64" \
-            --push \
-            .
-
-          # Build for arm64
-          docker buildx build \
-            --platform linux/arm64 \
-            -t "${TAG}-arm64" \
-            --push \
-            .
-
-      - name: Create Docker manifest
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          TAG="ghcr.io/redjax/serverbeacon-api:${VERSION}"
-
-          docker buildx imagetools create \
+            --target serverbeacon-api \
+            --platform linux/amd64,linux/arm64 \
             -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
-            "${TAG}-amd64" "${TAG}-arm64"
-
-          # Optionally push "latest" too
-          docker buildx imagetools create \
             -t "ghcr.io/redjax/serverbeacon-api:latest" \
-            "${TAG}-amd64" "${TAG}-arm64"
+            --push .
+
+      - name: Build & push CLI image
+        run: |
+          VERSION=${{ needs.goreleaser.outputs.version }}
+          docker buildx build \
+            --target serverbeacon \
+            --platform linux/amd64,linux/arm64 \
+            -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
+            -t "ghcr.io/redjax/serverbeacon:latest" \
+            --push .
