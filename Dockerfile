@@ -31,4 +31,4 @@ FROM gcr.io/distroless/static-debian12 AS serverbeacon
 WORKDIR /app
 COPY --from=builder /bin/serverbeacon /app/
 USER 1000
-ENTRYPOINT ["./serverbeacon", "start", "api"]
+ENTRYPOINT ["./serverbeacon"]
