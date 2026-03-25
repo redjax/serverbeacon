@@ -13,6 +13,7 @@ import (
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
@@ -91,92 +92,89 @@ func GetEnvPrefix() string {
 // falling back to the original if .local doesn't exist.
 // If configFile is empty, returns the default XDG config path.
 func FindConfigFile(configFile string) string {
-	if configFile == "" {
-		// Check XDG config location (~/.local/share/serverbeacon/config.yml)
-		defaultPath := GetDefaultConfigPath()
-		localPath := strings.TrimSuffix(defaultPath, ".yml") + ".local.yml"
+	// Search for config file if none is provided
+	if configFile != "" {
+		ext := filepath.Ext(configFile)
+		base := strings.TrimSuffix(configFile, ext)
+		localFile := base + ".local" + ext
 
-		// Prefer .local variant
-		if _, err := os.Stat(localPath); err == nil {
-			return localPath
+		if _, err := os.Stat(localFile); err == nil {
+			return localFile
 		}
-
-		// Fall back to default (may or may not exist yet)
-		return defaultPath
+		if _, err := os.Stat(configFile); err == nil {
+			return configFile
+		}
+		return ""
 	}
 
-	// Check for .local variant (e.g., config.yml -> config.local.yml)
-	ext := filepath.Ext(configFile)
-	base := strings.TrimSuffix(configFile, ext)
-	localFile := base + ".local" + ext
-
-	if _, err := os.Stat(localFile); err == nil {
-		return localFile
+	// Return config (or local config) if file is found
+	candidates := []string{"config.local.yml", "config.yml"}
+	for _, f := range candidates {
+		if _, err := os.Stat(f); err == nil {
+			return f
+		}
 	}
 
-	return configFile
+	return ""
 }
 
 // LoadConfig loads configuration from a file, environment variables, and/org CLI args.
 // Returns the parsed config struct
 func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
-	// Check for .local variant of file
+	// Initialize config object
+	K = koanf.New(".")
+
+	// Set config defaults
+	defaults := map[string]interface{}{
+		"debug": false,
+		"api": map[string]interface{}{
+			"proto": "http",
+			"host":  "0.0.0.0",
+			"port":  18080,
+		},
+	}
+
+	// Set defaults in Koanf config object
+	if err := K.Load(confmap.Provider(defaults, "."), nil); err != nil {
+		return nil, fmt.Errorf("error loading defaults: %w", err)
+	}
+
+	// Attempt to load from config file
 	configFile = FindConfigFile(configFile)
-
 	if configFile != "" {
-		if _, err := os.Stat(configFile); os.IsNotExist(err) {
-			if err := ensureConfigFile(configFile); err != nil {
-				return nil, fmt.Errorf("failed to create config file: %w", err)
+		if _, err := os.Stat(configFile); err == nil {
+			// Detect parser from file extension
+			parser, err := parserForFile(configFile)
+			if err != nil {
+				return nil, fmt.Errorf("unsupported config file format: %w", err)
 			}
-		}
 
-		// Determine parser for config file
-		parser, err := parserForFile(configFile)
-		if err != nil {
-			return nil, fmt.Errorf("unsupported config file format: %w", err)
-		}
-
-		// Load config from file
-		if err := K.Load(file.Provider(configFile), parser); err != nil {
-			return nil, fmt.Errorf("error loading config file: %w", err)
+			// Load config from file
+			if err := K.Load(file.Provider(configFile), parser); err != nil {
+				return nil, fmt.Errorf("error loading config file: %w", err)
+			}
 		}
 	}
 
-	// Load from env vars
+	// Load env vars
 	if err := K.Load(env.Provider(envPrefix, ".", func(s string) string {
 		return strings.Replace(strings.ToLower(strings.TrimPrefix(s, envPrefix)), "_", ".", -1)
 	}), nil); err != nil {
 		return nil, fmt.Errorf("error loading env vars: %w", err)
 	}
 
-	// Load from CLI args
+	// Load CLI args
 	if flagSet != nil {
 		if err := K.Load(posflag.Provider(flagSet, ".", K), nil); err != nil {
 			return nil, fmt.Errorf("error loading flags: %w", err)
 		}
 	}
 
-	// Unmarshal into Config struct
+	// Unmarshal config into Config struct
 	var cfg Config
 	if err := K.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)
 	}
-
-	// Set defaults for empty vars
-	if cfg.APiSettings.Proto == "" {
-		cfg.APiSettings.Proto = "http"
-	}
-
-	if cfg.APiSettings.Host == "" {
-		cfg.APiSettings.Host = "0.0.0.0"
-	}
-
-	if cfg.APiSettings.Port == 0 {
-		cfg.APiSettings.Port = 18080
-	}
-
-	// Expand filepaths in config, i.e. ~/ -> /home/username
-	cfg.expandPaths()
 
 	return &cfg, nil
 }
