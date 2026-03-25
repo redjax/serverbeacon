@@ -6,6 +6,7 @@ if ! command -v docker >&/dev/null; then
   exit 1
 fi
 
+declare -a CONTAINER_ARGS=()
 PORT=18080
 NAME="serverbeacon"
 IMG="serverbeacon"
@@ -15,11 +16,11 @@ TAG="latest"
 # INTERACTIVE=false
 DRY_RUN=false
 
-cmd=(docker run --rm)
+cmd=(docker run)
 
 function usage() {
   echo ""
-  echo "Usage: ${0} [OPTIONS]"
+  echo "Usage: ${0} [OPTIONS] [-- [CONTAINER ARGS...]]"
   echo ""
   echo "Options:"
   echo "  -p, --port         <int>     Set host port"
@@ -29,6 +30,10 @@ function usage() {
   echo "  -i, --img          <string>  Set the container image name to run"
   echo "  -t, --tag          <string>  Set the container image's tag to target"
   echo "  --dry-run                    Enable dry-run mode, state actions without taking them"
+  echo ""
+  echo "Examples:"
+  echo "  ${0} -i serverbeacon -t latest -- start rest-api"
+  echo "  ${0} -i serverbeacon-api -t latest"
   echo ""
 }
 
@@ -62,6 +67,11 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
+    --)
+      shift
+      CONTAINER_ARGS=("$@")
+      break
+      ;;
     *)
       echo "[ERROR] Invalid arg: $1" >&2
       usage
@@ -90,13 +100,14 @@ if [[ -z "${TAG}" ]]; then
   exit 1
 fi
 
-# if [[ "${INTERACTIVE}" == "true" ]]; then
-#   cmd+=(-it "${NAME}" /bin/bash)
-# else
-#   cmd+=(-d -p "${PORT}:18080" --name "${NAME}" "${IMG}:${TAG}")
-# fi
+cmd+=(-d -p "${PORT}:18080" --name "${NAME}")
 
-cmd+=(-d -p "${PORT}:18080" --name "${NAME}" "${IMG}:${TAG}")
+if [[ "${#CONTAINER_ARGS[@]}" -gt 0 ]]; then
+  cmd+=("${IMG}:${TAG}")
+  cmd+=("${CONTAINER_ARGS[@]}")
+else
+  cmd+=("${IMG}:${TAG}")
+fi
 
 echo "Running command:"
 echo "  ${cmd[*]}"
