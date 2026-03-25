@@ -69,7 +69,7 @@ func createDefaultConfigWithEnvVars() map[string]interface{} {
 		"debug": false,
 		"api": map[string]interface{}{
 			"proto": getEnvOrDefault(envPrefix+"PROTO", "http"),
-			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0."),
+			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0"),
 			"port":  getEnvOrDefault(envPrefix+"PORT", "18080"),
 		},
 	}
@@ -120,22 +120,23 @@ func FindConfigFile(configFile string) string {
 // LoadConfig loads configuration from a file, environment variables, and/org CLI args.
 // Returns the parsed config struct
 func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
-	// Create default config file if it doesn't exist
+	// Check for .local variant of file
+	configFile = FindConfigFile(configFile)
+
 	if configFile != "" {
 		if _, err := os.Stat(configFile); os.IsNotExist(err) {
 			if err := ensureConfigFile(configFile); err != nil {
 				return nil, fmt.Errorf("failed to create config file: %w", err)
 			}
 		}
-	}
 
-	// Determine parser
-	if configFile != "" {
+		// Determine parser for config file
 		parser, err := parserForFile(configFile)
 		if err != nil {
 			return nil, fmt.Errorf("unsupported config file format: %w", err)
 		}
 
+		// Load config from file
 		if err := K.Load(file.Provider(configFile), parser); err != nil {
 			return nil, fmt.Errorf("error loading config file: %w", err)
 		}
@@ -148,20 +149,20 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 		return nil, fmt.Errorf("error loading env vars: %w", err)
 	}
 
-	// Load from CLI flags
+	// Load from CLI args
 	if flagSet != nil {
 		if err := K.Load(posflag.Provider(flagSet, ".", K), nil); err != nil {
 			return nil, fmt.Errorf("error loading flags: %w", err)
 		}
 	}
 
-	// Unmarshal into config struct
+	// Unmarshal into Config struct
 	var cfg Config
 	if err := K.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)
 	}
 
-	// Set defaults for empty values
+	// Set defaults for empty vars
 	if cfg.APiSettings.Proto == "" {
 		cfg.APiSettings.Proto = "http"
 	}
@@ -174,11 +175,10 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 		cfg.APiSettings.Port = 18080
 	}
 
-	// Expand paths, i.e. ~ -> /home/username
+	// Expand filepaths in config, i.e. ~/ -> /home/username
 	cfg.expandPaths()
 
 	return &cfg, nil
-
 }
 
 // ensureConfigFile creates the config file if it doesn't exist
@@ -268,17 +268,21 @@ func getEnvOrDefault(key, defaultValue string) string {
 func Init(flagSet *pflag.FlagSet, configFile string) error {
 	var initErr error
 	once.Do(func() {
+		K = koanf.New(".")
+
+		// Check locations for existin config file
+		configFile = FindConfigFile(configFile)
+
 		c, err := LoadConfig(flagSet, configFile)
 		if err != nil {
 			initErr = fmt.Errorf("config.Init failed: %w", err)
 			return
 		}
-
-		// Debug config
-		// fmt.Printf("Config: %+v\n", c)
-
 		_cfg = c
 	})
+
+	// Debug config
+	// fmt.Printf("Config: %+v\n", c)
 
 	return initErr
 }
