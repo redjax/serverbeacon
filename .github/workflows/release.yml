@@ -14,6 +14,11 @@ on:
           - minor
           - patch
         default: ""
+      dry_run:
+        description: "Do a dry run, no tagging/publishing, just package and container builds"
+        type: boolean
+        required: false
+        default: false
 
 permissions: {}
 
@@ -30,11 +35,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Determine version & create tag
+      - name: Determine version
         id: version
         run: |
           ## Get latest version
@@ -43,7 +48,7 @@ jobs:
 
           echo "Latest tag: ${CURRENT}"
 
-          BUMP="${{ github.event.inputs.bump }}"
+          BUMP="${{ inputs.bump }}"
 
           ## Bump X.0.0
           if [[ "$BUMP" == "major" ]]; then
@@ -70,16 +75,16 @@ jobs:
             else
               COMMITS=$(git log ${CURRENT}..HEAD --pretty=format:"%s")
             fi
-            
+
             COMMIT_COUNT=$(echo "$COMMITS" | grep -v '^$' | wc -l)
             if [[ $COMMIT_COUNT -eq 0 ]]; then
               echo "No commits since last tag. Nothing to release."
               exit 1
             fi
-            
+
             echo "Commits since $CURRENT:"
             echo "$COMMITS"
-            
+
             ## feat(): commits = minor
             if echo "$COMMITS" | grep -qE "^feat(\\(.+\\))?:"; then
               echo "Found 'feat:' commits, bumping minor"
@@ -105,6 +110,11 @@ jobs:
           echo "New version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Create tag
+        if: ${{ !inputs.dry_run }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
           ## Force tag to current commit
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -112,16 +122,17 @@ jobs:
           git push origin "$VERSION" || true
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "stable"
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: "release --clean"
+          ## On dry run, build but do not release
+          args: ${{ inputs.dry_run && 'release --clean --snapshot' || 'release --clean' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -135,34 +146,54 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
 
       - name: Docker login
+        ## Skip Docker login on dry_run
+        if: ${{ !inputs.dry_run }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push API image
+      - name: Build API image
         run: |
           VERSION=${{ needs.goreleaser.outputs.version }}
-          docker buildx build \
-            --target serverbeacon-api \
-            --platform linux/amd64,linux/arm64 \
-            -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
-            -t "ghcr.io/redjax/serverbeacon-api:latest" \
-            --push .
 
-      - name: Build & push CLI image
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            docker buildx build \
+              --target serverbeacon-api \
+              --platform linux/amd64 \
+              -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
+              --load .
+          else
+            docker buildx build \
+              --target serverbeacon-api \
+              --platform linux/amd64,linux/arm64 \
+              -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
+              -t "ghcr.io/redjax/serverbeacon-api:latest" \
+              --push .
+          fi
+
+      - name: Build CLI image
         run: |
           VERSION=${{ needs.goreleaser.outputs.version }}
-          docker buildx build \
-            --target serverbeacon \
-            --platform linux/amd64,linux/arm64 \
-            -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
-            -t "ghcr.io/redjax/serverbeacon:latest" \
-            --push .
+
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            docker buildx build \
+              --target serverbeacon \
+              --platform linux/amd64 \
+              -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
+              --load .
+          else
+            docker buildx build \
+              --target serverbeacon \
+              --platform linux/amd64,linux/arm64 \
+              -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
+              -t "ghcr.io/redjax/serverbeacon:latest" \
+              --push .
+          fi
