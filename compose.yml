@@ -9,6 +9,8 @@ services:
     ports:
       - ${SERVERBEACON_API_PORT:-18080}:18080
     environment:
+      ## Generate with: openssl rand -hex 32
+      SERVERBEACON_APP_SECRET: ${SERVERBEACON_APP_SECRET:-}
       SERVERBEACON_DEBUG: ${SERVERBEACON_DEBUG:-false}
       SERVERBEACON_API_PROTO: ${SERVERBEACON_API_PROTO:-http}
       SERVERBEACON_API_HOST: 0.0.0.0
