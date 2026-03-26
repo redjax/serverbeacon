@@ -15,6 +15,13 @@ import (
 var configFile string
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// Entrypoint/init function
+func run() error {
 	// Accept -c/--config-file input
 	pflag.StringVarP(&configFile, "config-file", "c", "", "config file path (default: ~/.local/share/serverbeacon, $env:LOCALAPPDATA\\serverbeacon)")
 
