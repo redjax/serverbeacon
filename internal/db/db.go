@@ -14,8 +14,10 @@ func Open(path string) (*gorm.DB, error) {
 	// Extract dir path from db path
 	dir := filepath.Dir(path)
 	// Ensure parent dir exists
-	if err := os.Mkdir(dir, 0755); err != nil {
-		return nil, fmt.Errorf("failed creating db directory: %w", err)
+	if dir != "." && dir != string(filepath.Separator) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("failed creating db directory: %w", err)
+		}
 	}
 
 	dsn := fmt.Sprintf("file:%s?_journal_mode=WAL&_busy_timeout=5000&_foreign_keys=on", path)
