@@ -29,3 +29,15 @@ func Open(path string) (*gorm.DB, error) {
 
 	return gdb, nil
 }
+
+// Close ensures the connection to the database is closed.
+// Useful during app shutdown.
+func Close(gdb *gorm.DB) error {
+	sqlDB, err := gdb.DB()
+
+	if err != nil {
+		return err
+	}
+
+	return sqlDB.Close()
+}
