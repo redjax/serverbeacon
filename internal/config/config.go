@@ -246,23 +246,23 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 // }
 
 // expandPath returns the expanded path, handling ~ for home directory and converting to absolute path
-func expandPath(path string) string {
-	// Handle ~ expansion
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err == nil {
-			path = filepath.Join(home, path[2:])
-		}
-	}
+// func expandPath(path string) string {
+// 	// Handle ~ expansion
+// 	if strings.HasPrefix(path, "~/") {
+// 		home, err := os.UserHomeDir()
+// 		if err == nil {
+// 			path = filepath.Join(home, path[2:])
+// 		}
+// 	}
 
-	// Convert to absolute path
-	absPath, err := filepath.Abs(path)
-	if err == nil {
-		return absPath
-	}
+// 	// Convert to absolute path
+// 	absPath, err := filepath.Abs(path)
+// 	if err == nil {
+// 		return absPath
+// 	}
 
-	return path // Return original if expansion fails
-}
+// 	return path // Return original if expansion fails
+// }
 
 // getEnvOrDefault gets an environment variable or returns the default value
 func getEnvOrDefault(key, defaultValue string) string {
