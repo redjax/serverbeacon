@@ -80,6 +80,9 @@ func createDefaultConfigWithEnvVars() map[string]interface{} {
 			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0"),
 			"port":  getEnvOrDefault(envPrefix+"PORT", "18080"),
 		},
+		"db": map[string]interface{}{
+			"path": "serverbeacon.sqlite3",
+		},
 	}
 
 	return config
