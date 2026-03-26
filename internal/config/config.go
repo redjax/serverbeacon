@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
 	"github.com/spf13/pflag"
-	yamlv3 "gopkg.in/yaml.v3"
 )
 
 const envPrefix = "SERVERBEACON_"
@@ -31,19 +29,27 @@ var (
 )
 
 // Main config object
+// NOTE: When adding fields or structs, don't forget
+// to update the LoadConfig() mapping.
 type Config struct {
 	Debug       bool      `koanf:"debug"`
-	APiSettings ApiConfig `koanf:"api"`
+	APISettings APIConfig `koanf:"api"`
+	DB          DBConfig  `koanf:"db"`
 }
 
 // Settings for REST API server
-type ApiConfig struct {
+type APIConfig struct {
 	// Default: http
 	Proto string `koanf:"proto"`
 	// Default: 0.0.0.0
 	Host string `koanf:"host"`
 	// Default: 18080
 	Port int64 `koanf:"port"`
+}
+
+// Settings for app database
+type DBConfig struct {
+	Path string `koanf:"path" path:"expand"`
 }
 
 // Determines the Koanf parser to use based on filetype
@@ -65,18 +71,21 @@ func parserForFile(path string) (koanf.Parser, error) {
 }
 
 // createDefaultConfigWithEnvVars creates a default config map with values from env vars if available
-func createDefaultConfigWithEnvVars() map[string]interface{} {
-	config := map[string]interface{}{
-		"debug": false,
-		"api": map[string]interface{}{
-			"proto": getEnvOrDefault(envPrefix+"PROTO", "http"),
-			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0"),
-			"port":  getEnvOrDefault(envPrefix+"PORT", "18080"),
-		},
-	}
+// func createDefaultConfigWithEnvVars() map[string]interface{} {
+// 	config := map[string]interface{}{
+// 		"debug": false,
+// 		"api": map[string]interface{}{
+// 			"proto": getEnvOrDefault(envPrefix+"PROTO", "http"),
+// 			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0"),
+// 			"port":  getEnvOrDefault(envPrefix+"PORT", "18080"),
+// 		},
+// 		"db": map[string]interface{}{
+// 			"path": "serverbeacon.sqlite3",
+// 		},
+// 	}
 
-	return config
-}
+// 	return config
+// }
 
 // Return the default config file path (~/.local/share/serverbeacon/config.yml)
 func GetDefaultConfigPath() string {
@@ -132,6 +141,9 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 			"host":  "0.0.0.0",
 			"port":  18080,
 		},
+		"db": map[string]interface{}{
+			"path": "serverbeacon.sqlite3",
+		},
 	}
 
 	// Set defaults in Koanf config object
@@ -180,87 +192,88 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 }
 
 // ensureConfigFile creates the config file if it doesn't exist
-func ensureConfigFile(configFile string) error {
-	// Create config directory if it doesn't exist
-	configDir := filepath.Dir(configFile)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
+// func ensureConfigFile(configFile string) error {
+// 	// Create config directory if it doesn't exist
+// 	configDir := filepath.Dir(configFile)
+// 	if err := os.MkdirAll(configDir, 0755); err != nil {
+// 		return fmt.Errorf("failed to create config directory: %w", err)
+// 	}
 
-	// Generate default config with env vars and prompted token
-	configData := createDefaultConfigWithEnvVars()
+// 	// Generate default config with env vars and prompted token
+// 	configData := createDefaultConfigWithEnvVars()
 
-	// Marshal to YAML
-	data, err := yamlv3.Marshal(configData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal default config: %w", err)
-	}
+// 	// Marshal to YAML
+// 	data, err := yamlv3.Marshal(configData)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal default config: %w", err)
+// 	}
 
-	// Write to file
-	if err := os.WriteFile(configFile, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
+// 	// Write to file
+// 	if err := os.WriteFile(configFile, data, 0644); err != nil {
+// 		return fmt.Errorf("failed to write config file: %w", err)
+// 	}
 
-	fmt.Printf("\nConfig file created: %s\n", configFile)
-	return nil
-}
+// 	fmt.Printf("\nConfig file created: %s\n", configFile)
+// 	return nil
+// }
 
 // expandPaths walks the config struct and expands ~ in any field tagged with path:"expand"
-func (c *Config) expandPaths() {
-	expandStructPaths(reflect.ValueOf(c).Elem())
-}
+// func (c *Config) expandPaths() {
+// 	expandStructPaths(reflect.ValueOf(c).Elem())
+// }
 
 // expandStructPaths recursively walks a struct and expands paths in tagged fields
-func expandStructPaths(v reflect.Value) {
-	if v.Kind() != reflect.Struct {
-		return
-	}
+// func expandStructPaths(v reflect.Value) {
+// 	if v.Kind() != reflect.Struct {
+// 		return
+// 	}
 
-	t := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		fieldType := t.Field(i)
+// 	t := v.Type()
+// 	for i := 0; i < v.NumField(); i++ {
+// 		field := v.Field(i)
+// 		fieldType := t.Field(i)
 
-		// Check if field has path:"expand" tag
-		if tag := fieldType.Tag.Get("path"); tag == "expand" {
-			if field.Kind() == reflect.String && field.CanSet() {
-				field.SetString(expandPath(field.String()))
-			}
-		}
+// 		// Check if field has path:"expand" tag
+// 		if tag := fieldType.Tag.Get("path"); tag == "expand" {
+// 			if field.Kind() == reflect.String && field.CanSet() {
+// 				field.SetString(expandPath(field.String()))
+// 			}
+// 		}
 
-		// Recursively handle nested structs
-		if field.Kind() == reflect.Struct {
-			expandStructPaths(field)
-		}
-	}
-}
+// 		// Recursively handle nested structs
+// 		if field.Kind() == reflect.Struct {
+// 			expandStructPaths(field)
+// 		}
+// 	}
+// }
 
 // expandPath returns the expanded path, handling ~ for home directory and converting to absolute path
-func expandPath(path string) string {
-	// Handle ~ expansion
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err == nil {
-			path = filepath.Join(home, path[2:])
-		}
-	}
+// func expandPath(path string) string {
+// 	// Handle ~ expansion
+// 	if strings.HasPrefix(path, "~/") {
+// 		home, err := os.UserHomeDir()
+// 		if err == nil {
+// 			path = filepath.Join(home, path[2:])
+// 		}
+// 	}
 
-	// Convert to absolute path
-	absPath, err := filepath.Abs(path)
-	if err == nil {
-		return absPath
-	}
+// 	// Convert to absolute path
+// 	absPath, err := filepath.Abs(path)
+// 	if err == nil {
+// 		return absPath
+// 	}
 
-	return path // Return original if expansion fails
-}
+// 	return path // Return original if expansion fails
+// }
 
 // getEnvOrDefault gets an environment variable or returns the default value
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
+// func getEnvOrDefault(key, defaultValue string) string {
+// 	if value := os.Getenv(key); value != "" {
+// 		return value
+// 	}
+
+// 	return defaultValue
+// }
 
 // Init loads and caches the config (call from entrypoints like cmd/root.go)
 func Init(flagSet *pflag.FlagSet, configFile string) error {
