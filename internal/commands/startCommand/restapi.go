@@ -20,25 +20,25 @@ func NewRestApiCommand() *cobra.Command {
 
 			// Override Host config if passed from CLI
 			if h, err := cmd.Flags().GetString("host"); err == nil && h != "" {
-				cfg.APiSettings.Host = h
+				cfg.APISettings.Host = h
 			}
 
 			// Override/convert Port config if passed from CLI
 			if p, err := cmd.Flags().GetInt16("port"); err == nil && p != 0 {
-				cfg.APiSettings.Port = int64(p) // int16 -> int64
+				cfg.APISettings.Port = int64(p) // int16 -> int64
 			}
 
-			if cfg.APiSettings.Port < 1 || cfg.APiSettings.Port > 65535 {
-				return fmt.Errorf("invalid port: %d (must be 1-65535)", cfg.APiSettings.Port)
+			if cfg.APISettings.Port < 1 || cfg.APISettings.Port > 65535 {
+				return fmt.Errorf("invalid port: %d (must be 1-65535)", cfg.APISettings.Port)
 			}
 
-			if err := validators.ValidateTCPPort(cfg.APiSettings.Port); err != nil {
+			if err := validators.ValidateTCPPort(cfg.APISettings.Port); err != nil {
 				return err
 			}
 
-			server := api.NewHttpServer(fmt.Sprintf("%d", cfg.APiSettings.Port))
+			server := api.NewHttpServer(fmt.Sprintf("%d", cfg.APISettings.Port))
 
-			return server.ListenMulti(cfg.APiSettings.Host)
+			return server.ListenMulti(cfg.APISettings.Host)
 		},
 	}
 

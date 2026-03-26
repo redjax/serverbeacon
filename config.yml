@@ -5,3 +5,11 @@ api:
   proto: "http"
   host: "0.0.0.0"
   port: 18080
+
+db:
+  path: "serverbeacon.sqlite3"
+
+## Set APP_SECRET env var, don't store in config.
+#  Generate with: openssl rand -hex 32
+# app:
+#   secret: ""
