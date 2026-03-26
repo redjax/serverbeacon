@@ -34,6 +34,10 @@ func run() error {
 
 	cfg := config.GetConfig()
 
+	if cfg.Debug {
+		log.Printf("DB path: %s", cfg.DB.Path)
+	}
+
 	// Database initialization
 	gdb, err := db.Open(cfg.DB.Path)
 	if err != nil {

@@ -30,7 +30,7 @@ var (
 
 // Main config object
 // NOTE: When adding fields or structs, don't forget
-// to update the createDefaultConfigWithEnvVars() mapping.
+// to update the LoadConfig() mapping.
 type Config struct {
 	Debug       bool      `koanf:"debug"`
 	APISettings APIConfig `koanf:"api"`
@@ -140,6 +140,9 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 			"proto": "http",
 			"host":  "0.0.0.0",
 			"port":  18080,
+		},
+		"db": map[string]interface{}{
+			"path": "serverbeacon.sqlite3",
 		},
 	}
 
