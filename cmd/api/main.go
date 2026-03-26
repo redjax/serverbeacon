@@ -60,16 +60,7 @@ func run() error {
 		log.Fatal(err)
 	}
 
-	if len(bootstrapSecrets) > 0 {
-		// Print secrets to the console on first init
-		for k, v := range bootstrapSecrets {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", k, v)
-		}
-
-		fmt.Fprintln(os.Stderr)
-	}
-
-	fmt.Println()
+	printBootstrapSecrets(bootstrapSecrets)
 
 	// Initialize server
 	server := api.NewHttpServer(fmt.Sprintf("%d", cfg.APISettings.Port))
@@ -78,4 +69,17 @@ func run() error {
 	if err := server.ListenMulti("0.0.0.0"); err != nil {
 		log.Fatal(err)
 	}
+
+	return nil
+}
+
+func printBootstrapSecrets(secrets map[string]string) {
+	if len(secrets) == 0 {
+		return
+	}
+
+	for k, v := range secrets {
+		fmt.Fprintf(os.Stderr, "%s: %s\n", k, v)
+	}
+	fmt.Fprintln(os.Stderr)
 }
