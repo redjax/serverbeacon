@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"io"
 )
 
@@ -51,4 +52,47 @@ func Encrypt(plaintext string, appSecret string) (string, error) {
 
 	// Encode result as base64 sso it can be stored as text in the database
 	return base64.StdEncoding.EncodeToString(out), nil
+}
+
+// Decrypt takes a base64-encoded encrypted string and returns the original plaintext
+func Decrypt(encoded string, appSecret string) (string, error) {
+	// Decode base64 string back to raw bytes
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+
+	// Derive AES key from app secret
+	key := keyFromSecret(appSecret)
+
+	// Recreate block cipher
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", nil
+	}
+
+	// Recreate GCM mode using the same AES block that created the encrypted string
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	// Split nonce from ciphertext
+	nonceSize := gcm.NonceSize()
+	if len(raw) < nonceSize {
+		return "", errors.New("ciphertext is too short")
+	}
+
+	// Raw encoded bytes must contain a nonce at minimum
+	nonce := raw[:nonceSize]
+	cipherText := raw[nonceSize:]
+
+	// Decrypt and verify ciphertext
+	plaintext, err := gcm.Open(nil, nonce, cipherText, nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Return recovered plaintext as a string
+	return string(plaintext), nil
 }
