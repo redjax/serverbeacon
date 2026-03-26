@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -59,20 +58,15 @@ func (s *Store) CreateRegistrationCode(codeHash string, usesRemaining int, expir
 	return c, nil
 }
 
+// BootstrapExists checks if the bootstrap indicator exists in the database
 func (s *Store) BootstrapExists() (bool, error) {
-	var bs BootstrapState
+	var count int64
 
-	err := s.DB.First(&bs, 1).Error
-
-	if err == nil {
-		return true, nil
+	if err := s.DB.Model(&BootstrapState{}).Where("id = ?", 1).Count(&count).Error; err != nil {
+		return false, err
 	}
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, nil
-	}
-
-	return false, err
+	return count > 0, nil
 }
 
 // MarkBootstrap creates a record in the database to signal
