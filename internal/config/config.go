@@ -218,29 +218,29 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 // }
 
 // expandStructPaths recursively walks a struct and expands paths in tagged fields
-func expandStructPaths(v reflect.Value) {
-	if v.Kind() != reflect.Struct {
-		return
-	}
+// func expandStructPaths(v reflect.Value) {
+// 	if v.Kind() != reflect.Struct {
+// 		return
+// 	}
 
-	t := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		fieldType := t.Field(i)
+// 	t := v.Type()
+// 	for i := 0; i < v.NumField(); i++ {
+// 		field := v.Field(i)
+// 		fieldType := t.Field(i)
 
-		// Check if field has path:"expand" tag
-		if tag := fieldType.Tag.Get("path"); tag == "expand" {
-			if field.Kind() == reflect.String && field.CanSet() {
-				field.SetString(expandPath(field.String()))
-			}
-		}
+// 		// Check if field has path:"expand" tag
+// 		if tag := fieldType.Tag.Get("path"); tag == "expand" {
+// 			if field.Kind() == reflect.String && field.CanSet() {
+// 				field.SetString(expandPath(field.String()))
+// 			}
+// 		}
 
-		// Recursively handle nested structs
-		if field.Kind() == reflect.Struct {
-			expandStructPaths(field)
-		}
-	}
-}
+// 		// Recursively handle nested structs
+// 		if field.Kind() == reflect.Struct {
+// 			expandStructPaths(field)
+// 		}
+// 	}
+// }
 
 // expandPath returns the expanded path, handling ~ for home directory and converting to absolute path
 func expandPath(path string) string {
