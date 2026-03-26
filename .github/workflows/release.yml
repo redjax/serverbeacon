@@ -160,40 +160,65 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build API image
+      ####################
+      # Container Builds #
+      ####################
+
+      - name: Build Linux images
         run: |
           VERSION=${{ needs.goreleaser.outputs.version }}
 
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            docker buildx build \
-              --target serverbeacon-api \
-              --platform linux/amd64 \
-              -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
-              --load .
-          else
-            docker buildx build \
-              --target serverbeacon-api \
-              --platform linux/amd64,linux/arm64 \
-              -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
-              -t "ghcr.io/redjax/serverbeacon-api:latest" \
-              --push .
-          fi
+          ## amd64 standalone API
+          docker buildx build \
+            --target serverbeacon-api \
+            --platform linux/amd64 \
+            -t "ghcr.io/redjax/serverbeacon-api:${VERSION}-linux-amd64" \
+            --push .
 
-      - name: Build CLI image
+          ## arm64 standalone API
+          docker buildx build \
+            --target serverbeacon-api \
+            --platform linux/arm64 \
+            -t "ghcr.io/redjax/serverbeacon-api:${VERSION}-linux-arm64" \
+            --push .
+
+          ## amd64 serverbeacon cli
+          docker buildx build \
+            --target serverbeacon \
+            --platform linux/amd64 \
+            -t "ghcr.io/redjax/serverbeacon:${VERSION}-linux-amd64" \
+            --push .
+
+          ## arm64 serverbeacon cli
+          docker buildx build \
+            --target serverbeacon \
+            --platform linux/arm64 \
+            -t "ghcr.io/redjax/serverbeacon:${VERSION}-linux-arm64" \
+            --push .
+
+      - name: Create manifest tags
+        if: ${{ !inputs.dry_run }}
         run: |
           VERSION=${{ needs.goreleaser.outputs.version }}
 
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            docker buildx build \
-              --target serverbeacon \
-              --platform linux/amd64 \
-              -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
-              --load .
-          else
-            docker buildx build \
-              --target serverbeacon \
-              --platform linux/amd64,linux/arm64 \
-              -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
-              -t "ghcr.io/redjax/serverbeacon:latest" \
-              --push .
-          fi
+          ## Standalone API
+          docker buildx imagetools create \
+            -t "ghcr.io/redjax/serverbeacon-api:${VERSION}" \
+            "ghcr.io/redjax/serverbeacon-api:${VERSION}-linux-amd64" \
+            "ghcr.io/redjax/serverbeacon-api:${VERSION}-linux-arm64"
+
+          docker buildx imagetools create \
+            -t "ghcr.io/redjax/serverbeacon-api:latest" \
+            "ghcr.io/redjax/serverbeacon-api:${VERSION}-linux-amd64" \
+            "ghcr.io/redjax/serverbeacon-api:${VERSION}-linux-arm64"
+
+          ## serverbeacon CLI
+          docker buildx imagetools create \
+            -t "ghcr.io/redjax/serverbeacon:${VERSION}" \
+            "ghcr.io/redjax/serverbeacon:${VERSION}-linux-amd64" \
+            "ghcr.io/redjax/serverbeacon:${VERSION}-linux-arm64"
+
+          docker buildx imagetools create \
+            -t "ghcr.io/redjax/serverbeacon:latest" \
+            "ghcr.io/redjax/serverbeacon:${VERSION}-linux-amd64" \
+            "ghcr.io/redjax/serverbeacon:${VERSION}-linux-arm64"
