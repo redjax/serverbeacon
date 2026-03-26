@@ -47,15 +47,19 @@ func main() {
 	// Create auth store for users & tokens
 	store := auth.NewStore(gdb)
 
-	// Bootstrap initial users & secrets
+	// Bootstrap inintial users & secrets
 	bootstrapSecrets, err := auth.EnsureBootstrap(store)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Print secrets to console only (loggers will skip)
-	for k, v := range bootstrapSecrets {
-		fmt.Fprintf(os.Stderr, "%s: %s\n", k, v)
+	if len(bootstrapSecrets) > 0 {
+		// Print secrets to the console on first init
+		for k, v := range bootstrapSecrets {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", k, v)
+		}
+
+		fmt.Fprintln(os.Stderr)
 	}
 
 	fmt.Println()
