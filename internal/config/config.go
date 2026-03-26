@@ -72,21 +72,21 @@ func parserForFile(path string) (koanf.Parser, error) {
 }
 
 // createDefaultConfigWithEnvVars creates a default config map with values from env vars if available
-func createDefaultConfigWithEnvVars() map[string]interface{} {
-	config := map[string]interface{}{
-		"debug": false,
-		"api": map[string]interface{}{
-			"proto": getEnvOrDefault(envPrefix+"PROTO", "http"),
-			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0"),
-			"port":  getEnvOrDefault(envPrefix+"PORT", "18080"),
-		},
-		"db": map[string]interface{}{
-			"path": "serverbeacon.sqlite3",
-		},
-	}
+// func createDefaultConfigWithEnvVars() map[string]interface{} {
+// 	config := map[string]interface{}{
+// 		"debug": false,
+// 		"api": map[string]interface{}{
+// 			"proto": getEnvOrDefault(envPrefix+"PROTO", "http"),
+// 			"host":  getEnvOrDefault(envPrefix+"HOST", "0.0.0.0"),
+// 			"port":  getEnvOrDefault(envPrefix+"PORT", "18080"),
+// 		},
+// 		"db": map[string]interface{}{
+// 			"path": "serverbeacon.sqlite3",
+// 		},
+// 	}
 
-	return config
-}
+// 	return config
+// }
 
 // Return the default config file path (~/.local/share/serverbeacon/config.yml)
 func GetDefaultConfigPath() string {
