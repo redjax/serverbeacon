@@ -1,0 +1,20 @@
+---
+name: serverbeacon-dev
+
+services:
+  serverbeacon:
+    image: serverbeacon-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GO_IMG_VER: ${GO_IMG_VER:-1.26.1-alpine}
+    container_name: serverbeacon-api
+    command: ["start", "rest-api"]
+    ports:
+      - ${SERVERBEACON_API_PORT:-18080}:18080
+    environment:
+      SERVERBEACON_DEBUG: ${SERVERBEACON_DEBUG:-false}
+      SERVERBEACON_API_PROTO: ${SERVERBEACON_API_PROTO:-http}
+      SERVERBEACON_API_HOST: 0.0.0.0
+      SERVERBEACON_API_PORT: 18080

@@ -8,7 +8,6 @@ Simple Go app that listens on multiple interfaces for external hosts to check se
   - [Local Development](#local-development)
 - [Docker](#docker)
   - [Build and run locally](#build-and-run-locally)
-- [Progress](#progress)
 
 ## Usage
 
@@ -24,6 +23,13 @@ curl http[s]://your-ip-or-fqdn:18080/v1/health
 
 ### Local Development
 
+Requirements:
+
+- Go
+- Bash or compatible shell
+
+Steps:
+
 - Pull packages with `go mod tidy`
 - Run `./.scripts/build.sh`
 - Run `./.scripts/air-build-run.sh` to start development server with hot reloading
@@ -31,40 +37,61 @@ curl http[s]://your-ip-or-fqdn:18080/v1/health
 
 ## Docker
 
-The [Dockerfile](./Dockerfile) for `serverbeacon` builds the binary and runs it in a [distroless layer](https://github.com/GoogleContainerTools/distroless). This significantly reduces the image size, attack surface, and build time.
+The release pipeline publishes [Docker containers for each app](https://github.com/redjax?tab=packages&repo_name=serverbeacon).
+
+Available containers:
+
+| Name                                                                                         | Description                                                                                    |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`serverbeacon-api`](https://github.com/redjax/serverbeacon/pkgs/container/serverbeacon-api) | Run the REST API directly.                                                                     |
+| [`serverbeacon`](https://github.com/redjax/serverbeacon/pkgs/container/serverbeacon)         | Run the `serverbeacon` CLI app. Start different listeners, i.e. `serverbeacon start rest-api`. |
+
+Run the REST API server:
+
+```shell
+docker run --rm -d -p 18080:18080 --name serverbeacon-api serverbeacon-api:latest
+```
+
+Run the `serverbeacon` CLI container:
+
+```shell
+docker run --rm -d -p 18080:18080 --name serverbeacon-api serverbeacon:latest start rest-api
+```
+
+You can also use [the included `compose.yml`](./compose.yml) to run with `docker compose up -d`.
 
 ### Build and run locally
 
 Build the container using the [`./.scripts/docker/build.sh` script](./.scripts/docker/build.sh), or by running:
 
+REST API container:
+
 ```shell
-docker build -t serverbeacon:latest .
+docker build --target serverbeacon-api -t serverbeacon-api:latest .
+```
+
+`serverbeacon` CLI container:
+
+```shell
+docker build --target serverbeacon-api -t serverbeacon:latest .
 ```
 
 Run the container using the [`./.scripts/docker/run.sh` script](./.scripts/docker/run.sh), or by running:
 
+REST API:
+
 ```shell
-docker run --rm -d -p 18080:18080 --name serverbeacon serverbeacon:latest
+docker run --rm -d -p 18080:18080 --name serverbeacon-api serverbeacon-apis:latest
 ```
 
-## Progress
+`serverbeacon` CLI:
 
-- [ ] HTTP server/REST API
-  - [x] Simple HTTP server
-  - [x] `/ping` endpoint (return "pong")
-  - [-] `/health` endpoint
-    - [x] Return JSON with health status and timestamp
-    - [ ] An authenticated `/health` endpoint that returns stats about the underlying host
-- [ ] SSH server
-  - [ ] Allow SSH connections, immediately terminate
-  - [ ] Only allow SSH keys, no user/password auth
-- [ ] RPC message
-  - [ ] Create a client to 'ping' the server
-- [-] Docker container
-  - [x] distroless runtime image
-  - [ ] Publish to a registry
-- [ ] Pipelines
-  - [ ] Lint/format
-  - [ ] Build and release
-    - [ ] Go package
-    - [ ] Container registry
+```shell
+docker run --rm -d -p 18080:18080 --name serverbeacon serverbeacon:latest start rest-api
+```
+
+You can also use the [development Docker Compose file](./dev.compose.yml):
+
+```shell
+docker compose -f dev.compose.yml up -d
+```
