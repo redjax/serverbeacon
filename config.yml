@@ -8,3 +8,8 @@ api:
 
 db:
   path: "serverbeacon.sqlite3"
+
+## Set APP_SECRET env var, don't store in config.
+#  Generate with: openssl rand -hex 32
+# app:
+#   secret: ""
