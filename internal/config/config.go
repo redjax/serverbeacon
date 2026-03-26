@@ -33,7 +33,7 @@ var (
 // to update the createDefaultConfigWithEnvVars() mapping.
 type Config struct {
 	Debug       bool      `koanf:"debug"`
-	APiSettings APIConfig `koanf:"api"`
+	APISettings APIConfig `koanf:"api"`
 	DB          DBConfig  `koanf:"db"`
 }
 
