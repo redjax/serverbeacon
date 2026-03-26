@@ -58,8 +58,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s: %s\n", k, v)
 	}
 
+	fmt.Println()
+
 	// Initialize server
-	server := api.NewHttpServer(fmt.Sprintf("%d", cfg.APiSettings.Port))
+	server := api.NewHttpServer(fmt.Sprintf("%d", cfg.APISettings.Port))
 
 	// Start server
 	if err := server.ListenMulti("0.0.0.0"); err != nil {
