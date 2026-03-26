@@ -6,7 +6,7 @@ if ! command -v openssl &>/dev/null; then
   exit 1
 fi
 
-SECRET="$(openssl rand -base64 32)"
+SECRET="$(openssl rand -hex 32)"
 
 echo ""
 echo "Serverbeacon app secret:"
