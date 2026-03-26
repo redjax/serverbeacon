@@ -265,12 +265,13 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) (*Config, error) {
 // }
 
 // getEnvOrDefault gets an environment variable or returns the default value
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
+// func getEnvOrDefault(key, defaultValue string) string {
+// 	if value := os.Getenv(key); value != "" {
+// 		return value
+// 	}
+
+// 	return defaultValue
+// }
 
 // Init loads and caches the config (call from entrypoints like cmd/root.go)
 func Init(flagSet *pflag.FlagSet, configFile string) error {
