@@ -12,8 +12,9 @@ CWD=$(pwd)
 
 IMG="${SERVERBEACON_IMG_NAME:-serverbeacon}"
 TAG="${SERVERBEACON_IMG_TAG:-latest}"
+PLATFORM="${SERVERBEACON_PLATFORM:-auto}"
 
-# Default to building everything
+## Default to building everything
 BUILD_API=true
 BUILD_CLI=true
 
@@ -22,14 +23,39 @@ function usage() {
     echo "Usage: ${0} [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --all      Build API + CLI images (default)"
-    echo "  --api      Build API image only"  
-    echo "  --cli      Build CLI image only"
-    echo "  -t, --tag  Docker tag (default: latest)"
+    echo "  --all           Build API + CLI images (default)"
+    echo "  --api           Build API image only"  
+    echo "  --cli           Build CLI image only"
+    echo "  -p, --platform  Platform to build for, i.e. linux/amd64"
+    echo "  -t, --tag       Docker tag (default: latest)"
     echo ""
 }
 
-# Parse args
+function detect_platform() {
+    local arch
+
+    arch="$(uname -m)"
+    case "$arch" in
+        x86_64|amd64)
+            echo "linux/amd64"
+            ;;
+        aarch64|arm64)
+            echo "linux/arm64"
+            ;;
+        armv7l|armv7)
+            echo "linux/arm/v7"
+            ;;
+        armv6l|armv6)
+            echo "linux/arm/v6"
+            ;;
+        *)
+            echo "[ERROR] Unsupported architecture: ${arch}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+## Parse args
 while [[ $# -gt 0 ]]; do
     case $1 in
         --all)
@@ -51,6 +77,10 @@ while [[ $# -gt 0 ]]; do
             TAG="$2"
             shift 2
             ;;
+        -p|--platform)
+            PLATFORM="$2"
+            shift 2
+            ;;
         --help|-h)
             usage
             exit 0
@@ -66,6 +96,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ "$PLATFORM" == "auto" ]] || [[ -z "$PLATFORM" ]]; then
+    PLATFORM="$(detect_platform)"
+fi
+
 function cleanup() {
   cd "$CWD"
 }
@@ -73,11 +107,14 @@ trap cleanup EXIT
 
 cd "$REPO_ROOT"
 
+echo "Building container for platform: ${PLATFORM}"
+
 ## Build API
 if [ "$BUILD_API" = true ]; then
     echo "Building API image: ${IMG}-api:${TAG}"
 
     if ! docker build \
+        --platform "${PLATFORM}" \
         --target serverbeacon-api \
         -t "${IMG}-api:${TAG}" .; then
         
@@ -94,6 +131,7 @@ if [ "$BUILD_CLI" = true ]; then
     echo "Building CLI image: ${IMG}:${TAG}"
     
     if ! docker build \
+        --platform "${PLATFORM}" \
         --target serverbeacon \
         -t "${IMG}:${TAG}" .; then
         
