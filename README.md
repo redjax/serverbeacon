@@ -58,7 +58,11 @@ Run the `serverbeacon` CLI container:
 docker run --rm -d -p 18080:18080 --name serverbeacon-api serverbeacon:latest start rest-api
 ```
 
-You can also use [the included `compose.yml`](./compose.yml) to run with `docker compose up -d`.
+You can also use [the included `compose.yml`](./compose.yml) to run with `docker compose up -d`. Download with:
+
+```shell
+curl -o compose.yml https://raw.githubusercontent.com/redjax/serverbeacon/refs/heads/main/compose.yml
+```
 
 ### Build and run locally
 
